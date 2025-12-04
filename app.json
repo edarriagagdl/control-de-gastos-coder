@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "entrega-final",
-    "slug": "entrega-final",
+    "name": "ExpenseTracker - Eduardo",
+    "slug": "expense-tracker-eduardo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,20 +10,33 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#4A90E2"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.eduardo.expensetracker",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Esta aplicación necesita acceso a tu ubicación para registrar dónde realizas tus gastos.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Esta aplicación necesita acceso a tu ubicación para registrar dónde realizas tus gastos."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#4A90E2"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.eduardo.expensetracker",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "projectDescription": "Proyecto Final - App de Control de Gastos con SQLite, Redux y Geolocalización (México)"
     }
   }
 }
