@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
-import { inicializarBaseDatos, operacionesGastos, operacionesCategorias } from './database/database';
+import { Provider, useSelector, useDispatch } from 'react-redux';
+import { inicializarBaseDatos } from './database/database';
+
+// Redux
+import { store } from './redux/store';
+import { cargarGastos, agregarGasto, eliminarGasto } from './redux/gastosSlice';
+import { cargarCategorias, agregarCategoria } from './redux/categoriasSlice';
 
 // Importar componentes
 import Navegacion from './components/Navegacion';
@@ -12,10 +18,16 @@ import PantallaResumen from './pantallas/PantallaResumen';
 import PantallaGastos from './pantallas/PantallaGastos';
 import PantallaCategorias from './pantallas/PantallaCategorias';
 
-export default function App() {
+// Componente principal con Redux
+function AppConRedux() {
+  const dispatch = useDispatch();
+  
+  // Estados de Redux
+  const gastosState = useSelector(state => state.gastos);
+  const categoriasState = useSelector(state => state.categorias);
+  
+  // Estados locales para UI
   const [pantallActual, setPantallaActual] = useState('gastos');
-  const [gastos, setGastos] = useState([]);
-  const [categorias, setCategorias] = useState([]);
   const [mostrarModalAgregar, setMostrarModalAgregar] = useState(false);
   const [mostrarModalCategoria, setMostrarModalCategoria] = useState(false);
   const [nuevoGasto, setNuevoGasto] = useState({
@@ -32,49 +44,33 @@ export default function App() {
   const inicializarApp = async () => {
     try {
       await inicializarBaseDatos();
-      await cargarDatos();
+      // Cargar datos usando Redux
+      dispatch(cargarGastos());
+      dispatch(cargarCategorias());
     } catch (error) {
       Alert.alert('Error', 'No se pudo inicializar la aplicación');
     }
   };
 
-  const cargarDatos = async () => {
-    try {
-      const datosGastos = await operacionesGastos.obtenerTodos();
-      const datosCategorias = await operacionesCategorias.obtenerTodas();
-      
-      setGastos(datosGastos);
-      setCategorias(datosCategorias);
-    } catch (error) {
-      Alert.alert('Error', 'No se pudieron cargar los datos');
-    }
-  };
-
-  const agregarGasto = async () => {
+  const manejarAgregarGasto = async () => {
     if (!nuevoGasto.cantidad || !nuevoGasto.descripcion) {
       Alert.alert('Error', 'Por favor completa todos los campos');
       return;
     }
 
     try {
-      const hoy = new Date().toISOString().split('T')[0];
-      await operacionesGastos.agregar(
-        parseFloat(nuevoGasto.cantidad), 
-        nuevoGasto.descripcion, 
-        nuevoGasto.categoria, 
-        hoy
-      );
-      
+      await dispatch(agregarGasto(nuevoGasto)).unwrap();
       setNuevoGasto({ cantidad: '', descripcion: '', categoria: 'Comida' });
       setMostrarModalAgregar(false);
-      await cargarDatos();
+      // Recargar la lista para obtener los IDs correctos de la BD
+      dispatch(cargarGastos());
       Alert.alert('Éxito', 'Gasto agregado correctamente');
     } catch (error) {
       Alert.alert('Error', 'No se pudo agregar el gasto');
     }
   };
 
-  const eliminarGasto = async (id) => {
+  const manejarEliminarGasto = async (id) => {
     Alert.alert(
       'Confirmar',
       '¿Estás seguro de eliminar este gasto?',
@@ -84,8 +80,7 @@ export default function App() {
           text: 'Eliminar',
           onPress: async () => {
             try {
-              await operacionesGastos.eliminar(id);
-              await cargarDatos();
+              await dispatch(eliminarGasto(id)).unwrap();
             } catch (error) {
               Alert.alert('Error', 'No se pudo eliminar el gasto');
             }
@@ -95,17 +90,18 @@ export default function App() {
     );
   };
 
-  const agregarCategoria = async () => {
+  const manejarAgregarCategoria = async () => {
     if (!nuevaCategoria) {
       Alert.alert('Error', 'Escribe el nombre de la categoría');
       return;
     }
 
     try {
-      await operacionesCategorias.agregar(nuevaCategoria);
+      await dispatch(agregarCategoria(nuevaCategoria)).unwrap();
       setNuevaCategoria('');
       setMostrarModalCategoria(false);
-      await cargarDatos();
+      // Recargar para obtener IDs correctos
+      dispatch(cargarCategorias());
       Alert.alert('Éxito', 'Categoría agregada');
     } catch (error) {
       Alert.alert('Error', 'No se pudo agregar la categoría');
@@ -113,7 +109,7 @@ export default function App() {
   };
 
   const obtenerTotalGastos = () => {
-    return gastos.reduce((total, gasto) => total + gasto.amount, 0).toFixed(2);
+    return gastosState.lista.reduce((total, gasto) => total + gasto.amount, 0).toFixed(2);
   };
 
   const renderizarPantallaActual = () => {
@@ -121,33 +117,33 @@ export default function App() {
       case 'dashboard':
         return (
           <PantallaResumen 
-            gastos={gastos}
+            gastos={gastosState.lista}
             totalGastos={obtenerTotalGastos()}
           />
         );
       case 'gastos':
         return (
           <PantallaGastos
-            gastos={gastos}
+            gastos={gastosState.lista}
             totalGastos={obtenerTotalGastos()}
             onAgregarGasto={() => setMostrarModalAgregar(true)}
-            onEliminarGasto={eliminarGasto}
+            onEliminarGasto={manejarEliminarGasto}
           />
         );
       case 'categorias':
         return (
           <PantallaCategorias
-            categorias={categorias}
+            categorias={categoriasState.lista}
             onAgregarCategoria={() => setMostrarModalCategoria(true)}
           />
         );
       default:
         return (
           <PantallaGastos
-            gastos={gastos}
+            gastos={gastosState.lista}
             totalGastos={obtenerTotalGastos()}
             onAgregarGasto={() => setMostrarModalAgregar(true)}
-            onEliminarGasto={eliminarGasto}
+            onEliminarGasto={manejarEliminarGasto}
           />
         );
     }
@@ -156,7 +152,10 @@ export default function App() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>💰 Control de Gastos</Text>
+        <Text style={styles.headerTitle}>💰 Control de Gastos (Redux)</Text>
+        {(gastosState.cargando || categoriasState.cargando) && (
+          <Text style={styles.cargando}>Cargando...</Text>
+        )}
       </View>
 
       <Navegacion 
@@ -169,9 +168,9 @@ export default function App() {
       <ModalAgregarGasto
         visible={mostrarModalAgregar}
         nuevoGasto={nuevoGasto}
-        categorias={categorias}
+        categorias={categoriasState.lista}
         onCambiarGasto={setNuevoGasto}
-        onGuardar={agregarGasto}
+        onGuardar={manejarAgregarGasto}
         onCerrar={() => setMostrarModalAgregar(false)}
       />
 
@@ -179,10 +178,19 @@ export default function App() {
         visible={mostrarModalCategoria}
         nuevaCategoria={nuevaCategoria}
         onCambiarCategoria={setNuevaCategoria}
-        onGuardar={agregarCategoria}
+        onGuardar={manejarAgregarCategoria}
         onCerrar={() => setMostrarModalCategoria(false)}
       />
     </View>
+  );
+}
+
+// Componente raíz con Provider
+export default function App() {
+  return (
+    <Provider store={store}>
+      <AppConRedux />
+    </Provider>
   );
 }
 
@@ -201,5 +209,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
+  },
+  cargando: {
+    fontSize: 14,
+    color: 'white',
+    fontStyle: 'italic',
+    marginTop: 5,
   },
 });
