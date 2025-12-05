@@ -50,9 +50,35 @@ const gastosSlice = createSlice({
   reducers: {
     limpiarError: (state) => {
       state.error = null;
+    },
+    // Acciones para manejar los gastos
+    gastosRecibidos: (state, action) => {
+      state.lista = action.payload;
+      state.cargando = false;
+    },
+    gastoAgregado: (state, action) => {
+      state.lista.unshift(action.payload); // Agregar al inicio
+      state.cargando = false;
+    },
+    gastoEliminado: (state, action) => {
+      state.lista = state.lista.filter(gasto => gasto.id !== action.payload);
+    },
+    establecerCargando: (state, action) => {
+      state.cargando = action.payload;
+    },
+    establecerError: (state, action) => {
+      state.error = action.payload;
+      state.cargando = false;
     }
   }
 });
 
-export const { limpiarError } = gastosSlice.actions;
+export const { 
+  limpiarError, 
+  gastosRecibidos, 
+  gastoAgregado, 
+  gastoEliminado, 
+  establecerCargando, 
+  establecerError 
+} = gastosSlice.actions;
 export default gastosSlice.reducer;

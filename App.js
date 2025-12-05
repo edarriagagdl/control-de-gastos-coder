@@ -1,12 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider, useSelector, useDispatch } from 'react-redux';
 import { inicializarBaseDatos } from './database/database';
 
 // Redux
 import { store } from './redux/store';
-import { cargarGastos, agregarGasto, eliminarGasto } from './redux/gastosSlice';
-import { cargarCategorias, agregarCategoria } from './redux/categoriasSlice';
+import { 
+  cargarGastos, 
+  agregarGasto, 
+  eliminarGasto,
+  gastosRecibidos,
+  gastoAgregado,
+  gastoEliminado,
+  establecerCargando as establecerCargandoGastos
+} from './redux/gastosSlice';
+import { 
+  cargarCategorias, 
+  agregarCategoria,
+  categoriasRecibidas,
+  categoriaAgregada,
+  establecerCargando as establecerCargandoCategorias
+} from './redux/categoriasSlice';
 
 // Importar componentes
 import Navegacion from './components/Navegacion';
@@ -14,9 +29,9 @@ import ModalAgregarGasto from './components/ModalAgregarGasto';
 import ModalAgregarCategoria from './components/ModalAgregarCategoria';
 
 // Importar pantallas
-import PantallaResumen from './pantallas/PantallaResumen';
 import PantallaGastos from './pantallas/PantallaGastos';
 import PantallaCategorias from './pantallas/PantallaCategorias';
+import PantallaMapaGastos from './pantallas/PantallaMapaGastos';
 
 // Componente principal con Redux
 function AppConRedux() {
@@ -33,7 +48,7 @@ function AppConRedux() {
   const [nuevoGasto, setNuevoGasto] = useState({
     cantidad: '',
     descripcion: '',
-    categoria: 'Comida'
+    categoria: ''
   });
   const [nuevaCategoria, setNuevaCategoria] = useState('');
 
@@ -41,14 +56,43 @@ function AppConRedux() {
     inicializarApp();
   }, []);
 
+  // Actualizar categoría por defecto cuando se cargan las categorías
+  useEffect(() => {
+    if (categoriasState.lista.length > 0 && !nuevoGasto.categoria) {
+      setNuevoGasto(prev => ({
+        ...prev,
+        categoria: categoriasState.lista[0].name
+      }));
+    }
+  }, [categoriasState.lista]);
+
   const inicializarApp = async () => {
     try {
       await inicializarBaseDatos();
-      // Cargar datos usando Redux
-      dispatch(cargarGastos());
-      dispatch(cargarCategorias());
+      // Cargar datos manualmente y actualizar Redux
+      cargarDatos();
     } catch (error) {
       Alert.alert('Error', 'No se pudo inicializar la aplicación');
+    }
+  };
+
+  const cargarDatos = async () => {
+    try {
+      // Importar las operaciones de base de datos
+      const { operacionesGastos, operacionesCategorias } = await import('./database/database');
+      
+      // Limpiar duplicados en categorías
+      await operacionesCategorias.limpiarDuplicados();
+      
+      // Cargar gastos
+      const gastos = await operacionesGastos.obtenerTodos();
+      dispatch(gastosRecibidos(gastos));
+      
+      // Cargar categorías
+      const categorias = await operacionesCategorias.obtenerTodas();
+      dispatch(categoriasRecibidas(categorias));
+    } catch (error) {
+      console.error('Error al cargar datos:', error);
     }
   };
 
@@ -59,11 +103,32 @@ function AppConRedux() {
     }
 
     try {
-      await dispatch(agregarGasto(nuevoGasto)).unwrap();
-      setNuevoGasto({ cantidad: '', descripcion: '', categoria: 'Comida' });
+      // Importar operaciones de base de datos
+      const { operacionesGastos } = await import('./database/database');
+      
+      // Agregar a la base de datos
+      const hoy = new Date().toISOString().split('T')[0];
+      await operacionesGastos.agregar(
+        parseFloat(nuevoGasto.cantidad),
+        nuevoGasto.descripcion,
+        nuevoGasto.categoria,
+        hoy
+      );
+
+      // Agregar al Redux
+      const nuevoGastoCompleto = {
+        id: Date.now(), // ID temporal
+        amount: parseFloat(nuevoGasto.cantidad),
+        description: nuevoGasto.descripcion,
+        category: nuevoGasto.categoria,
+        date: hoy
+      };
+      dispatch(gastoAgregado(nuevoGastoCompleto));
+
+      // Limpiar formulario
+      const primerCategoria = categoriasState.lista.length > 0 ? categoriasState.lista[0].name : '';
+      setNuevoGasto({ cantidad: '', descripcion: '', categoria: primerCategoria });
       setMostrarModalAgregar(false);
-      // Recargar la lista para obtener los IDs correctos de la BD
-      dispatch(cargarGastos());
       Alert.alert('Éxito', 'Gasto agregado correctamente');
     } catch (error) {
       Alert.alert('Error', 'No se pudo agregar el gasto');
@@ -80,7 +145,14 @@ function AppConRedux() {
           text: 'Eliminar',
           onPress: async () => {
             try {
-              await dispatch(eliminarGasto(id)).unwrap();
+              // Importar operaciones de base de datos
+              const { operacionesGastos } = await import('./database/database');
+              
+              // Eliminar de la base de datos
+              await operacionesGastos.eliminar(id);
+              
+              // Eliminar del Redux
+              dispatch(gastoEliminado(id));
             } catch (error) {
               Alert.alert('Error', 'No se pudo eliminar el gasto');
             }
@@ -97,11 +169,22 @@ function AppConRedux() {
     }
 
     try {
-      await dispatch(agregarCategoria(nuevaCategoria)).unwrap();
+      // Importar operaciones de base de datos
+      const { operacionesCategorias } = await import('./database/database');
+      
+      // Agregar a la base de datos
+      await operacionesCategorias.agregar(nuevaCategoria);
+
+      // Agregar al Redux
+      const nuevaCategoriaCompleta = {
+        id: Date.now(), // ID temporal
+        name: nuevaCategoria
+      };
+      dispatch(categoriaAgregada(nuevaCategoriaCompleta));
+
+      // Limpiar formulario
       setNuevaCategoria('');
       setMostrarModalCategoria(false);
-      // Recargar para obtener IDs correctos
-      dispatch(cargarCategorias());
       Alert.alert('Éxito', 'Categoría agregada');
     } catch (error) {
       Alert.alert('Error', 'No se pudo agregar la categoría');
@@ -114,13 +197,6 @@ function AppConRedux() {
 
   const renderizarPantallaActual = () => {
     switch (pantallActual) {
-      case 'dashboard':
-        return (
-          <PantallaResumen 
-            gastos={gastosState.lista}
-            totalGastos={obtenerTotalGastos()}
-          />
-        );
       case 'gastos':
         return (
           <PantallaGastos
@@ -137,6 +213,8 @@ function AppConRedux() {
             onAgregarCategoria={() => setMostrarModalCategoria(true)}
           />
         );
+      case 'mapa':
+        return <PantallaMapaGastos />;
       default:
         return (
           <PantallaGastos
@@ -150,55 +228,62 @@ function AppConRedux() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>💰 Control de Gastos (Redux)</Text>
-        {(gastosState.cargando || categoriasState.cargando) && (
-          <Text style={styles.cargando}>Cargando...</Text>
-        )}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>💰 Control de Gastos</Text>
+          {(gastosState.cargando || categoriasState.cargando) && (
+            <Text style={styles.cargando}>Cargando...</Text>
+          )}
+        </View>
+
+        <Navegacion 
+          pantallaActual={pantallActual}
+          onCambiarPantalla={setPantallaActual}
+        />
+
+        {renderizarPantallaActual()}
+        
+        <ModalAgregarGasto
+          visible={mostrarModalAgregar}
+          nuevoGasto={nuevoGasto}
+          categorias={categoriasState.lista}
+          onCambiarGasto={setNuevoGasto}
+          onGuardar={manejarAgregarGasto}
+          onCerrar={() => setMostrarModalAgregar(false)}
+        />
+
+        <ModalAgregarCategoria
+          visible={mostrarModalCategoria}
+          nuevaCategoria={nuevaCategoria}
+          onCambiarCategoria={setNuevaCategoria}
+          onGuardar={manejarAgregarCategoria}
+          onCerrar={() => setMostrarModalCategoria(false)}
+        />
       </View>
-
-      <Navegacion 
-        pantallaActual={pantallActual}
-        onCambiarPantalla={setPantallaActual}
-      />
-
-      {renderizarPantallaActual()}
-      
-      <ModalAgregarGasto
-        visible={mostrarModalAgregar}
-        nuevoGasto={nuevoGasto}
-        categorias={categoriasState.lista}
-        onCambiarGasto={setNuevoGasto}
-        onGuardar={manejarAgregarGasto}
-        onCerrar={() => setMostrarModalAgregar(false)}
-      />
-
-      <ModalAgregarCategoria
-        visible={mostrarModalCategoria}
-        nuevaCategoria={nuevaCategoria}
-        onCambiarCategoria={setNuevaCategoria}
-        onGuardar={manejarAgregarCategoria}
-        onCerrar={() => setMostrarModalCategoria(false)}
-      />
-    </View>
+    </SafeAreaView>
   );
 }
 
-// Componente raíz con Provider
+// Componente raíz con Provider y SafeAreaProvider
 export default function App() {
   return (
-    <Provider store={store}>
-      <AppConRedux />
-    </Provider>
+    <SafeAreaProvider>
+      <Provider store={store}>
+        <AppConRedux />
+      </Provider>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#3498db', // Mismo color que el header para continuidad
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
-    paddingTop: 50,
+    backgroundColor: '#f8f9fa',
   },
   header: {
     backgroundColor: '#3498db',

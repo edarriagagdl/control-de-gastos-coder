@@ -32,9 +32,31 @@ const categoriasSlice = createSlice({
   reducers: {
     limpiarError: (state) => {
       state.error = null;
+    },
+    // Acciones para manejar las categorías
+    categoriasRecibidas: (state, action) => {
+      state.lista = action.payload;
+      state.cargando = false;
+    },
+    categoriaAgregada: (state, action) => {
+      state.lista.push(action.payload);
+      state.cargando = false;
+    },
+    establecerCargando: (state, action) => {
+      state.cargando = action.payload;
+    },
+    establecerError: (state, action) => {
+      state.error = action.payload;
+      state.cargando = false;
     }
   }
 });
 
-export const { limpiarError } = categoriasSlice.actions;
+export const { 
+  limpiarError, 
+  categoriasRecibidas, 
+  categoriaAgregada, 
+  establecerCargando, 
+  establecerError 
+} = categoriasSlice.actions;
 export default categoriasSlice.reducer;

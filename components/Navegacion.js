@@ -3,9 +3,9 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
 const Navegacion = ({ pantallaActual, onCambiarPantalla }) => {
   const botones = [
-    { id: 'dashboard', texto: 'Inicio' },
     { id: 'gastos', texto: 'Gastos' },
-    { id: 'categorias', texto: 'Categorías' }
+    { id: 'categorias', texto: 'Categorías' },
+    { id: 'mapa', texto: 'Mapa' }
   ];
 
   return (
@@ -31,6 +31,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#2980b9',
     padding: 10,
+    paddingBottom: 15, // Espacio adicional para evitar botones de Android
   },
   botonNav: {
     flex: 1,

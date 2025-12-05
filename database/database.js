@@ -67,5 +67,18 @@ export const operacionesCategorias = {
   // Agregar nueva categoría
   agregar: async (nombre) => {
     return await db.runAsync('INSERT INTO categories (name) VALUES (?)', [nombre]);
+  },
+
+  // Limpiar categorías duplicadas
+  limpiarDuplicados: async () => {
+    // Eliminar duplicados manteniendo solo el primer registro de cada nombre
+    await db.runAsync(`
+      DELETE FROM categories 
+      WHERE id NOT IN (
+        SELECT MIN(id) 
+        FROM categories 
+        GROUP BY name
+      )
+    `);
   }
 };
