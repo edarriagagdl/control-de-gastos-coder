@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ExpenseTracker - Eduardo",
-    "slug": "expense-tracker-eduardo",
+    "name": "ControlDeGastos - Eduardo",
+    "slug": "control-de-gastos-eduardo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.eduardo.expensetracker",
+      "bundleIdentifier": "com.eduardo.ControlDeGastos",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Esta aplicación necesita acceso a tu ubicación para registrar dónde realizas tus gastos.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Esta aplicación necesita acceso a tu ubicación para registrar dónde realizas tus gastos."
@@ -26,7 +26,7 @@
         "backgroundColor": "#4A90E2"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.eduardo.expensetracker",
+      "package": "com.eduardo.controldegastos",
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION"
