@@ -29,12 +29,3 @@ La aplicación tiene **3 pantallas principales**:
 - **Redux**: Los datos de gastos vienen del store global
 - **Geocoding reverso**: Convierte coordenadas en direcciones
 
-
-### **Acciones directas:**
-```javascript
-// Agregar gasto (simple y directo)
-1. Guardar en base de datos
-2. dispatch(gastoAgregado(nuevoGasto))
-3. UI se actualiza inmediatamente
-```
-
